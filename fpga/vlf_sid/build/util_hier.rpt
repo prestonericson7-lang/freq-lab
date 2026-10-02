@@ -1,0 +1,50 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2026.1 (win64) Build 6511674 Tue Jun 16 11:02:23 MDT 2026
+| Date         : Thu Oct  1 06:55:14 2026
+| Host         : boobieJuicer9000 running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file P:/Downloads/freq-lab/fpga/vlf_sid/build/util_hier.rpt
+| Design       : vlf_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Routed
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++--------------------+---------------+------------+------------+---------+------+-------+--------+--------+------------+
+|      Instance      |     Module    | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs  | RAMB36 | RAMB18 | DSP Blocks |
++--------------------+---------------+------------+------------+---------+------+-------+--------+--------+------------+
+| vlf_top            |         (top) |       9142 |       9134 |       0 |    8 | 14028 |      0 |      9 |         50 |
+|   (vlf_top)        |         (top) |        308 |        308 |       0 |    0 |   852 |      0 |      0 |          1 |
+|   g_ch[0].u_ch     |   vlf_channel |        975 |        974 |       0 |    1 |  1453 |      0 |      1 |          6 |
+|     (g_ch[0].u_ch) |   vlf_channel |        937 |        936 |       0 |    1 |  1453 |      0 |      0 |          6 |
+|   g_ch[1].u_ch     | vlf_channel_0 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[1].u_ch) | vlf_channel_0 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   g_ch[2].u_ch     | vlf_channel_1 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[2].u_ch) | vlf_channel_1 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   g_ch[3].u_ch     | vlf_channel_2 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[3].u_ch) | vlf_channel_2 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   g_ch[4].u_ch     | vlf_channel_3 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[4].u_ch) | vlf_channel_3 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   g_ch[5].u_ch     | vlf_channel_4 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[5].u_ch) | vlf_channel_4 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   g_ch[6].u_ch     | vlf_channel_5 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[6].u_ch) | vlf_channel_5 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   g_ch[7].u_ch     | vlf_channel_6 |        953 |        952 |       0 |    1 |  1446 |      0 |      1 |          6 |
+|     (g_ch[7].u_ch) | vlf_channel_6 |        915 |        914 |       0 |    1 |  1446 |      0 |      0 |          6 |
+|   u_fan            |       fan_pwm |         32 |         32 |       0 |    0 |    66 |      0 |      0 |          1 |
+|   u_regs           |  cmd_regs_vlf |       1142 |       1142 |       0 |    0 |  1522 |      0 |      1 |          0 |
+|     (u_regs)       |  cmd_regs_vlf |        981 |        981 |       0 |    0 |  1467 |      0 |      1 |          0 |
+|     u_rx           |       uart_rx |        135 |        135 |       0 |    0 |    33 |      0 |      0 |          0 |
++--------------------+---------------+------------+------------+---------+------+-------+--------+--------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

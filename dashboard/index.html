@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Space-weather stations</title>
+<style>
+  :root { --bg:#0f1318; --panel:#171c23; --line:#2a323d; --fg:#dde3ea; --dim:#8a96a5; --acc:#ffb347; --ok:#5fd38d; --bad:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, Segoe UI, Roboto, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0 12px 0 0; font-weight:600; }
+  .chip { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:12px; }
+  .chip b { color:var(--acc); }
+  .chip.stale b { color:var(--bad); }
+  .ctl { margin-left:auto; display:flex; gap:6px; align-items:center; }
+  select, button { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:5px 9px; font:inherit; cursor:pointer; }
+  button.on { border-color:var(--acc); color:var(--acc); }
+  main { padding:12px 16px; display:grid; gap:12px; grid-template-columns: 1fr; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  section h2 { font-size:13px; margin:0 0 6px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  canvas { width:100%; height:260px; display:block; }
+  canvas.short { height:140px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--dim); font-weight:600; }
+  .tag { display:inline-block; padding:1px 6px; border-radius:4px; font-size:11px; border:1px solid var(--line); margin-right:4px; }
+  .tag.ok { border-color:var(--ok); color:var(--ok); }
+  .tag.multi { border-color:var(--acc); color:var(--acc); }
+  .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--dim); margin-top:4px; }
+  .legend i { display:inline-block; width:14px; height:3px; vertical-align:middle; margin-right:4px; }
+  .muted { color:var(--dim); }
+  @media (min-width: 1100px) { main { grid-template-columns: 2fr 1fr; } section.wide { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Space-weather stations</h1>
+  <div id="chips"></div>
+  <div class="ctl">
+    <select id="station"></select>
+    <button data-r="3600">1 h</button><button data-r="21600">6 h</button>
+    <button data-r="86400" class="on">24 h</button><button data-r="259200">3 d</button>
+    <span id="clock" class="muted"></span>
+  </div>
+</header>
+<main>
+  <section class="wide"><h2>VLF station levels (dB re 1 ADC count) <span id="serinfo" class="muted"></span></h2>
+    <canvas id="vlf"></canvas><div id="vlflegend" class="legend"></div></section>
+  <section><h2>GOES 0.1-0.8 nm X-ray flux</h2><canvas id="goes" class="short"></canvas></section>
+  <section><h2>Lightning strokes per minute <span id="sfinfo" class="muted"></span></h2><canvas id="sferic" class="short"></canvas></section>
+  <section><h2>Schumann mode 1: amplitude (pT/√Hz) <span id="schinfo" class="muted"></span></h2><canvas id="schumann" class="short"></canvas></section>
+  <section><h2>Riometer absorption (dB) <span id="rioinfo" class="muted"></span></h2><canvas id="riometer" class="short"></canvas></section>
+  <section class="wide"><h2>Flare alerts (last range)</h2><div id="alerts"></div></section>
+  <section class="wide"><h2>Strokes seen by two or more stations (time of arrival, last hour)</h2><div id="toa"></div></section>
+</main>
+<script>
+const COLORS = ['#ffb347','#5fd38d','#6fb7ff','#ff6b6b','#c792ea','#f6f08a','#59d9d4','#9aa5b1'];
+let range = 86400, station = '', timer = null;
+const $ = id => document.getElementById(id);
+const fmtT = (t, r) => { const d = new Date(t * 1000); const p = n => String(n).padStart(2, '0');
+  return r > 86400 ? `${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}` : `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+const fmtFull = t => new Date(t * 1000).toISOString().replace('T', ' ').slice(0, 19);
+async function api(path) { const r = await fetch(path); if (!r.ok) throw new Error(path + ' ' + r.status); return r.json(); }
+
+function setupCanvas(c) {
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  c.width = w * dpr; c.height = h * dpr; const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h); return { g, w, h };
+}
+// series: [{name, t:[], y:[], color}], opts: {log, ymin, ymax, t0, t1, bars, lines:[{y,label}]}
+function plot(c, series, o) {
+  const { g, w, h } = setupCanvas(c);
+  const L = 46, R = 10, T = 8, B = 22, pw = w - L - R, ph = h - T - B;
+  const t0 = o.t0, t1 = o.t1;
+  let ys = []; series.forEach(s => s.y.forEach(v => { if (v != null && isFinite(v) && (!o.log || v > 0)) ys.push(v); }));
+  if (!ys.length) { g.fillStyle = '#8a96a5'; g.fillText('no data in range', L + 8, T + 20); return; }
+  let ymin = o.ymin ?? Math.min(...ys), ymax = o.ymax ?? Math.max(...ys);
+  if (o.log) { ymin = Math.log10(ymin); ymax = Math.log10(ymax); }
+  if (ymax - ymin < 1e-9) { ymax += 1; ymin -= 1; } const pad = (ymax - ymin) * 0.06; ymin -= pad; ymax += pad;
+  const X = t => L + (t - t0) / (t1 - t0) * pw, Y = v => T + (1 - ((o.log ? Math.log10(v) : v) - ymin) / (ymax - ymin)) * ph;
+  g.strokeStyle = '#2a323d'; g.fillStyle = '#8a96a5'; g.font = '11px system-ui'; g.lineWidth = 1;
+  const nt = Math.max(2, Math.floor(pw / 90));
+  for (let i = 0; i <= nt; i++) { const t = t0 + (t1 - t0) * i / nt, x = X(t); g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + ph); g.stroke(); g.fillText(fmtT(t, t1 - t0), x - 16, h - 6); }
+  for (let i = 0; i <= 4; i++) { const v = ymin + (ymax - ymin) * i / 4, y = T + ph - i / 4 * ph; g.beginPath(); g.moveTo(L, y); g.lineTo(L + pw, y); g.stroke();
+    g.fillText(o.log ? ('1e' + v.toFixed(1)) : v.toFixed(1), 2, y + 4); }
+  (o.lines || []).forEach(l => { const y = Y(l.y); if (y < T || y > T + ph) return; g.strokeStyle = '#ff6b6b55'; g.beginPath(); g.moveTo(L, y); g.lineTo(L + pw, y); g.stroke(); g.fillStyle = '#ff6b6b'; g.fillText(l.label, L + pw - 14, y - 2); });
+  (o.marks || []).forEach(m => { const x = X(m.t); g.strokeStyle = m.color || '#ffb34788'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + ph); g.stroke(); g.lineWidth = 1; });
+  series.forEach(s => {
+    g.strokeStyle = g.fillStyle = s.color; g.lineWidth = 1.2;
+    if (o.bars) { const bw = Math.max(1, pw / Math.max(1, (t1 - t0) / (s.bin || 60)) - 1);
+      s.t.forEach((t, i) => { const v = s.y[i]; if (v == null) return; g.fillRect(X(t), Y(v), bw, T + ph - Y(v)); }); return; }
+    g.beginPath(); let up = false;
+    s.t.forEach((t, i) => { const v = s.y[i]; if (v == null || !isFinite(v) || (o.log && v <= 0)) { up = false; return; }
+      const x = X(t), y = Y(v); if (!up) { g.moveTo(x, y); up = true; } else g.lineTo(x, y); });
+    g.stroke();
+  });
+}
+
+async function refresh() {
+  const now = Date.now() / 1000, t0 = now - range;
+  $('clock').textContent = fmtFull(now) + ' UTC';
+  const st = await api('/api/status');
+  const sel = $('station'); const names = st.stations.map(s => s.station);
+  if (sel.options.length !== names.length || [...sel.options].some((o, i) => o.value !== names[i])) {
+    sel.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
+  }
+  if (!station || !names.includes(station)) station = names[0] || '';
+  sel.value = station;
+  $('chips').innerHTML = st.stations.map(s => { const age = now - s.last_seen; const stale = age > 120;
+    return `<span class="chip${stale ? ' stale' : ''}">${s.station} <b>${age < 60 ? Math.round(age) + ' s' : age < 3600 ? Math.round(age / 60) + ' min' : Math.round(age / 3600) + ' h'}</b> ago · ${s.rows} rows · ${s.kinds.join(',')}</span>`; }).join('')
+    + (st.goes ? `<span class="chip">GOES <b>${st.goes.cls}</b></span>` : '') + `<span class="chip">alerts 24 h <b>${st.alerts_24h}</b></span>`;
+  if (!station) return;
+  const step = Math.max(1, Math.round(range / 2000));
+  const [ser, goes, sf, al, toa, sch, rio] = await Promise.all([
+    api(`/api/series?station=${encodeURIComponent(station)}&from=${t0}&to=${now}&step=${step}`),
+    api(`/api/goes?from=${t0}&to=${now}`),
+    api(`/api/sferics?from=${t0}&to=${now}&bin=${range <= 21600 ? 60 : range <= 86400 ? 300 : 900}`),
+    api(`/api/alerts?from=${t0}&to=${now}`),
+    api(`/api/toa?from=${now - 3600}&to=${now}`),
+    api(`/api/generic?station=${encodeURIComponent(station)}&kind=schumann&from=${t0}&to=${now}`),
+    api(`/api/riometer?station=${encodeURIComponent(station)}&from=${t0}&to=${now}`)]);
+  plot($('schumann'), [{ name: 'm1', t: sch.map(r => r.t), y: sch.map(r => r.m1_H_pT), color: '#c792ea' },
+    { name: 'm2', t: sch.map(r => r.t), y: sch.map(r => r.m2_H_pT), color: '#59d9d4' }], { t0, t1: now, ymin: 0 });
+  $('schinfo').textContent = sch.length ? `${sch.length} reports (purple mode 1, teal mode 2); last centre ${sch[sch.length - 1].m1_Hz} Hz` : 'no monitor on this station';
+  plot($('riometer'), [{ name: 'abs', t: rio.map(r => r[0]), y: rio.map(r => r[4]), color: '#ff6b6b' }], { t0, t1: now });
+  $('rioinfo').textContent = rio.length ? `${rio.length} points at ${rio[0][1]} MHz` : 'no riometer on this station';
+  const calls = Object.keys(ser.ch).filter(c => c !== 'REF');
+  const series = calls.map((c, i) => ({ name: c, t: ser.t, y: ser.ch[c], color: COLORS[i % COLORS.length] }));
+  const marks = al.filter(a => a.station === station).map(a => ({ t: a.t_onset, color: a.goes_confirmed ? '#5fd38d99' : '#ffb34799' }));
+  plot($('vlf'), series, { t0, t1: now, marks });
+  $('vlflegend').innerHTML = series.map(s => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join('') + `<span class="muted">| vertical bars: flare alerts (green = GOES-confirmed)</span>`;
+  $('serinfo').textContent = ser.t.length ? `${ser.t.length} points, every ${step} s` : '';
+  plot($('goes'), [{ name: 'GOES', t: goes.map(g => g[0]), y: goes.map(g => g[1]), color: '#dde3ea' }],
+    { t0, t1: now, log: true, ymin: 1e-8, ymax: 1e-3, lines: [{ y: 1e-6, label: 'C' }, { y: 1e-5, label: 'M' }, { y: 1e-4, label: 'X' }] });
+  const bin = range <= 21600 ? 60 : range <= 86400 ? 300 : 900;
+  plot($('sferic'), [{ name: 'strokes', t: sf.bins.map(b => b[0]), y: sf.bins.map(b => b[1] / (bin / 60)), color: '#6fb7ff', bin }], { t0, t1: now, bars: true, ymin: 0 });
+  $('sfinfo').textContent = sf.total ? `${sf.total} strokes, all stations` : '';
+  $('alerts').innerHTML = al.length ? `<table><tr><th>onset (UTC)</th><th>station</th><th>peak dev</th><th>channels</th><th>GOES</th><th>duration</th><th></th></tr>` +
+    al.map(a => `<tr><td>${fmtFull(a.t_onset)}</td><td>${a.station}</td><td>${a.dev_db > 0 ? '+' : ''}${a.dev_db.toFixed(2)} dB</td><td>${a.channels.join(', ')}</td>
+      <td>${a.goes_class}</td><td>${Math.round((a.t_end - a.t_onset) / 60)} min</td><td>${a.goes_confirmed ? '<span class="tag ok">GOES-confirmed</span>' : ''}${a.multi_station ? `<span class="tag multi">also ${a.other_stations.join(', ')}</span>` : ''}</td></tr>`).join('') + '</table>'
+    : '<p class="muted">no flare alerts in this range</p>';
+  $('toa').innerHTML = toa.length ? `<table><tr><th>time (UTC)</th><th>stations</th><th>arrival differences (µs, first station = 0)</th></tr>` +
+    toa.slice(0, 50).map(g => `<tr><td>${fmtFull(g.t)}.${String(Math.round((g.t % 1) * 1e6)).padStart(6, '0')}</td><td>${Object.keys(g.arrivals).length}</td>
+      <td>${Object.entries(g.arrivals).map(([s, a]) => `${s}: ${a.dt_us > 0 ? '+' : ''}${a.dt_us} µs (${a.pol > 0 ? '+' : '-'}${a.peak})`).join(' · ')}</td></tr>`).join('') + '</table>'
+    : '<p class="muted">none yet (needs the v2 bitstream running <code>sferics --push</code> on at least two stations)</p>';
+}
+$('station').addEventListener('change', e => { station = e.target.value; refresh().catch(console.error); });
+document.querySelectorAll('button[data-r]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('button[data-r]').forEach(x => x.classList.remove('on')); b.classList.add('on');
+  range = +b.dataset.r; refresh().catch(console.error); }));
+function loop() { refresh().catch(e => { $('serinfo').textContent = 'error: ' + e.message; }); timer = setTimeout(loop, 30000); }
+loop();
+window.addEventListener('resize', () => refresh().catch(() => {}));
+</script>
+</body>
+</html>

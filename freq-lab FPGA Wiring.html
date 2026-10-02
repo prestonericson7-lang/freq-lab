@@ -1,0 +1,547 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>freq-lab FPGA Wiring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* layout: bench sheet. The JM1 pin map anchors the page; one section per instrument;
+   wiring drawn as colored jumper runs from JM1 pads to the parts. */
+:root{
+  --bg:#f2f4f1; --surface:#ffffff; --surface-2:#f7f8f6; --ink:#17202a; --muted:#566170;
+  --rule:#dfe3e6; --rule-strong:#b7bfc8; --accent:#a3521a; --accent-soft:#f5e5d7;
+  --danger:#b3261e; --danger-soft:#fbe9e6; --ok:#1d7a46;
+  --hdr:#2a3038; --pad:#edf0f2; --on-wire:#ffffff; --pin-off:#cfd5db; --pin-off-text:#4b5562;
+  --w-ana:#1c63c7; --w-out:#7a3fc2; --w-in:#16834f; --w-uart:#a87700; --w-fan:#0d8a8c;
+  --w-p33:#d0312d; --w-p5:#df6419; --w-gnd:#1e2329;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1318; --surface:#161c23; --surface-2:#1b222b; --ink:#e6eaef; --muted:#9ca6b3;
+    --rule:#28313b; --rule-strong:#3e4955; --accent:#e58f50; --accent-soft:#33261b;
+    --danger:#ff7b6f; --danger-soft:#3a1f1c; --ok:#4cc38a;
+    --hdr:#05070a; --pad:#1f2730; --on-wire:#0b0f14; --pin-off:#37414c; --pin-off-text:#b3bcc6;
+    --w-ana:#5b9ff2; --w-out:#ab88f4; --w-in:#45c587; --w-uart:#e3b341; --w-fan:#3cc6c8;
+    --w-p33:#ff6b63; --w-p5:#ff9a52; --w-gnd:#a7b0ba;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1318; --surface:#161c23; --surface-2:#1b222b; --ink:#e6eaef; --muted:#9ca6b3;
+  --rule:#28313b; --rule-strong:#3e4955; --accent:#e58f50; --accent-soft:#33261b;
+  --danger:#ff7b6f; --danger-soft:#3a1f1c; --ok:#4cc38a;
+  --hdr:#05070a; --pad:#1f2730; --on-wire:#0b0f14; --pin-off:#37414c; --pin-off-text:#b3bcc6;
+  --w-ana:#5b9ff2; --w-out:#ab88f4; --w-in:#45c587; --w-uart:#e3b341; --w-fan:#3cc6c8;
+  --w-p33:#ff6b63; --w-p5:#ff9a52; --w-gnd:#a7b0ba;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+.page{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(36px,5.4vw,54px);font-weight:700;letter-spacing:.005em}
+h2{font-size:clamp(27px,3.4vw,34px);font-weight:700}
+h3{font-size:20px;font-weight:600}
+p{margin:0}
+a{color:inherit}
+.eyebrow{font:600 12px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.masthead{display:grid;gap:14px;padding-block:6px 28px;border-bottom:1px solid var(--rule)}
+.lede{max-width:64ch;color:var(--muted);font-size:17.5px}
+.jump{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14.5px}
+.jump a{text-decoration:none;border-bottom:1px solid var(--rule-strong);padding-bottom:1px}
+.jump a:hover{border-color:var(--accent);color:var(--accent)}
+section{padding-block:40px;border-bottom:1px solid var(--rule);display:grid;gap:18px}
+section > *{min-width:0}
+.prose{display:grid;gap:12px;max-width:72ch}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;display:grid;gap:12px;grid-template-rows:auto auto 1fr auto auto;min-width:0}
+.card-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.name{display:flex;align-items:center;gap:9px;font:700 21px/1.1 var(--display)}
+.pdot{width:13px;height:13px;border-radius:50%;background:var(--c);flex:none}
+.badge{font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent);padding:6px 9px;border-radius:999px}
+.what{font-weight:600}
+dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font-size:14.5px}
+dt{color:var(--muted)} dd{margin:0}
+button{font:600 14px var(--body);cursor:pointer}
+.show{justify-self:start;background:transparent;border:1px solid var(--rule-strong);color:var(--ink);border-radius:6px;padding:7px 13px}
+.show:hover{border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.callout{background:var(--accent-soft);border-radius:10px;padding:16px 18px;display:grid;gap:6px}
+.callout h3{color:var(--accent)}
+.pinwrap{display:grid;grid-template-columns:minmax(0,520px) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.pinwrap{grid-template-columns:1fr}}
+.pinbox{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:8px}
+.pinbox svg{width:100%;min-width:440px;height:auto;display:block}
+.side{display:grid;gap:16px;align-content:start}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden;justify-self:start}
+.seg button{background:var(--surface);color:var(--ink);border:0;border-right:1px solid var(--rule);padding:9px 15px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;font-size:14px;list-style:none;padding:0;margin:0}
+.legend li{display:flex;align-items:center;gap:8px}
+.sw{width:13px;height:13px;border-radius:50%;background:var(--c);flex:none}
+.note{font-size:14.5px;color:var(--muted)}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px}
+.diagram{width:100%;min-width:640px;height:auto;display:block}
+.cap{font-size:14.5px;color:var(--muted);max-width:76ch}
+.status{font:500 13px/1.7 var(--mono);color:var(--muted)}
+.status b{color:var(--ok);font-weight:600}
+.status i{font-style:normal;color:var(--accent)}
+pre{margin:0;background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;overflow-x:auto;font:400 13.5px/1.65 var(--mono);color:var(--ink)}
+pre .c{color:var(--muted)}
+code{font-family:var(--mono);font-size:.9em}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px}
+.two > *{min-width:0;display:grid;gap:10px;align-content:start}
+.warn{background:var(--danger-soft);border-radius:10px;padding:16px 18px;display:grid;gap:10px}
+.warn h2{color:var(--danger)}
+ul.check,ol.steps{display:grid;gap:9px;padding-left:22px;margin:0;max-width:78ch}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 11.5px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+td code{white-space:nowrap}
+footer{padding-block:24px;color:var(--muted);font-size:13.5px}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+
+/* drawing styles */
+.hdr{fill:var(--hdr)}
+.pin.r-ana{fill:var(--w-ana)} .pin.r-out{fill:var(--w-out)} .pin.r-in{fill:var(--w-in)} .pin.r-uart{fill:var(--w-uart)}
+.pin.r-fan{fill:var(--w-fan)} .pin.r-p33{fill:var(--w-p33)} .pin.r-p5{fill:var(--w-p5)} .pin.r-gnd{fill:var(--w-gnd)} .pin.r-off{fill:var(--pin-off)}
+.pnum{font:600 9.5px var(--mono);text-anchor:middle;dominant-baseline:central;fill:var(--on-wire)}
+.pnum.r-off{fill:var(--pin-off-text)}
+.plab{font:500 12.5px var(--body);fill:var(--ink)}
+.plab.off{fill:var(--muted);font-weight:400}
+.ball{font:400 11px var(--mono);fill:var(--muted)}
+.pad rect{fill:var(--pad);stroke:var(--rule-strong)}
+.pn{font:600 12.5px var(--mono);fill:var(--ink)}
+.pl{font:500 12.5px var(--body);fill:var(--muted)}
+.w{fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.w.ana{stroke:var(--w-ana)} .w.out{stroke:var(--w-out)} .w.in{stroke:var(--w-in)} .w.uart{stroke:var(--w-uart)}
+.w.fan{stroke:var(--w-fan)} .w.p33{stroke:var(--w-p33)} .w.p5{stroke:var(--w-p5);stroke-dasharray:9 6} .w.gnd{stroke:var(--w-gnd)}
+.w.usb{stroke:var(--muted);stroke-width:2.4;stroke-dasharray:4 5}
+.ah.ana{fill:var(--w-ana)} .ah.out{fill:var(--w-out)} .ah.in{fill:var(--w-in)} .ah.uart{fill:var(--w-uart)} .ah.fan{fill:var(--w-fan)}
+.res{fill:var(--surface);stroke:var(--ink);stroke-width:1.6}
+.plate{stroke:var(--ink);stroke-width:2.8;fill:none}
+.gs{stroke:var(--ink);stroke-width:1.8;fill:none}
+.dot{fill:var(--ink)}
+.box{fill:var(--surface-2);stroke:var(--rule-strong);stroke-width:1.2}
+.t{font:500 13px var(--body);fill:var(--ink)}
+.tb{font:700 15.5px var(--display);fill:var(--ink)}
+.tm{font:400 12px var(--body);fill:var(--muted)}
+.tc{font:500 12px var(--mono);fill:var(--ink)}
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Puzhi PZ7020-StarLite · Zynq XC7Z020 · header JM1</p>
+  <h1>freq-lab FPGA wiring</h1>
+  <p class="lede">Your board has three designs ready to load. Each one turns the FPGA into a different lab instrument that you run from the PC over a 3-wire serial link. This sheet covers what each one does, what plugs into which pin, and what a working first run looks like.</p>
+  <nav class="jump" aria-label="Sections">
+    <a href="#pick">The three designs</a><a href="#pins">Pin map</a><a href="#safety">Before you connect</a>
+    <a href="#lockin">Lock-in</a><a href="#photon">Photon counter</a><a href="#corr">Correlator</a>
+    <a href="#shared">PC link, fan, loading</a><a href="#rest">Other sketches</a>
+  </nav>
+</header>
+
+<section id="pick" aria-labelledby="pick-h">
+  <h2 id="pick-h">The three designs</h2>
+  <div class="cards">
+    <article class="card">
+      <div class="card-top"><span class="name"><span class="pdot" style="--c:var(--w-ana)"></span>Lock-in amplifier</span><span class="badge">Start here</span></div>
+      <p class="what">A signal generator and a very sensitive meter in one.</p>
+      <p>Sends a sine wave into something, then measures how strongly and how late it answers at exactly that frequency, even when the answer is buried in noise. Sweep the frequency to draw a resonance curve, or let it lock onto a resonance and follow it.</p>
+      <dl><dt>First test</dt><dd>3 resistors and 1 capacitor</dd><dt>Later</dt><dd>coils, piezos, crystals, LC circuits, sensors</dd></dl>
+      <button type="button" class="show" data-d="lockin">Show its pins</button>
+    </article>
+    <article class="card">
+      <div class="card-top"><span class="name"><span class="pdot" style="--c:var(--w-in)"></span>Photon counter</span></div>
+      <p class="what">A two-channel pulse counter that spots coincidences.</p>
+      <p>Counts pulses from two light detectors, and counts how often both fire within a time window you set, in 20 ns steps. Subtracting the chance overlaps tells you whether both detectors are seeing the same light.</p>
+      <dl><dt>First test</dt><dd>any two 3.3 V pulse sources</dd><dt>Real use</dt><dd>two detector modules with 3.3 V pulse outputs</dd></dl>
+      <button type="button" class="show" data-d="photon">Show its pins</button>
+    </article>
+    <article class="card">
+      <div class="card-top"><span class="name"><span class="pdot" style="--c:var(--w-out)"></span>Two-channel correlator</span></div>
+      <p class="what">Compares two analog signals in real time.</p>
+      <p>Samples two inputs about 195,000 times a second each and reports how alike they are (coherence, −1 to +1) and at what time offset. Built for two-station ELF antenna experiments; a GPS input lines up two boards.</p>
+      <dl><dt>First test</dt><dd>one signal into both inputs</dd><dt>Real use</dt><dd>two sensors with amplifiers, GPS optional</dd></dl>
+      <button type="button" class="show" data-d="corr">Show its pins</button>
+    </article>
+  </div>
+  <div class="callout">
+    <h3>Do the lock-in loop-back first</h3>
+    <p>It needs no sensors. Three resistors and a capacitor feed the board's own output back into its input, so one run proves the whole chain: loading the design, the serial link, the signal output, the ADC and the math. After that, anything that misbehaves is the sensor, not the setup. Then dry-run the photon counter with test pulses, then the correlator.</p>
+  </div>
+  <p class="status">All three: <b>build clean in Vivado 2026.1</b>, timing met, simulation passes. None has run on the real board yet.</p>
+</section>
+
+<section id="pins" aria-labelledby="pins-h">
+  <h2 id="pins-h">JM1 pin map</h2>
+  <div class="pinwrap">
+    <div class="pinbox"><svg id="pinmap" viewBox="0 0 520 598" role="img" aria-label="JM1 40-pin header, pins used by the selected design"></svg></div>
+    <div class="side">
+      <div class="seg" role="group" aria-label="Show the pins for">
+        <button type="button" data-d="lockin" aria-pressed="true">Lock-in</button>
+        <button type="button" data-d="photon" aria-pressed="false">Photon counter</button>
+        <button type="button" data-d="corr" aria-pressed="false">Correlator</button>
+      </div>
+      <p class="note" id="pinnote">Lock-in uses JM1 5, 6, 7, 8, 10, 12, 14, 16, plus GND.</p>
+      <ul class="legend" aria-label="Pin colors">
+        <li><span class="sw" style="--c:var(--w-ana)"></span>Analog in (ADC)</li>
+        <li><span class="sw" style="--c:var(--w-out)"></span>Signal out</li>
+        <li><span class="sw" style="--c:var(--w-in)"></span>Digital in</li>
+        <li><span class="sw" style="--c:var(--w-uart)"></span>Serial to PC</li>
+        <li><span class="sw" style="--c:var(--w-fan)"></span>Fan</li>
+        <li><span class="sw" style="--c:var(--w-p33)"></span>3.3 V out</li>
+        <li><span class="sw" style="--c:var(--w-p5)"></span>5 V out</li>
+        <li><span class="sw" style="--c:var(--w-gnd)"></span>Ground</li>
+        <li><span class="sw" style="--c:var(--pin-off)"></span>Free</li>
+      </ul>
+      <div class="prose note">
+        <p>Odd pins are one row and even pins the other; pin 2 sits right next to pin 1. Pin 1 is marked on the board (square pad, triangle or a "1" on the silkscreen). The small codes next to each pin (E17, H16…) are the FPGA ball names from Puzhi's pin sheet.</p>
+        <p>Every signal pin on JM1 is 3.3 V logic. Bank 35 can be switched to 1.8 or 2.5 V, but these designs assume the default 3.3 V. JM2 is not used.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="safety" aria-labelledby="safety-h">
+  <div class="warn">
+    <h2 id="safety-h">Before you connect anything</h2>
+    <ul class="check">
+      <li><strong>3.3 V maximum on any signal pin.</strong> JM1-1 is 5 V. Never let it touch a signal pin.</li>
+      <li><strong>ADC pins read 0 to 1.0 V</strong> (JM1-6, 8, 9, 11). Above 1 V just reads full scale. Above 3.3 V can damage the chip.</li>
+      <li><strong>Detector inputs take 3.3 V logic pulses only.</strong> Never wire a SiPM, APD or photomultiplier straight in. Their bias runs from tens of volts to over a thousand. A module with a built-in discriminator or comparator output is what goes here.</li>
+      <li><strong>Serial is 3.3 V.</strong> Use the Teensy 4.1 bridge or a 3.3 V USB-serial adapter, never a 5 V one.</li>
+      <li><strong>Check the fan's PWM wire first.</strong> Power the fan, leave its PWM wire unplugged, and measure it to ground. 3.3 V or less is fine. About 5 V needs a small transistor in between; don't connect it directly.</li>
+      <li><strong>One shared ground.</strong> Teensy, sensors, detectors and GPS all connect to board GND (JM1-3, 4 or 33–36).</li>
+      <li><strong>Rewire with the board unplugged.</strong></li>
+    </ul>
+  </div>
+</section>
+
+<section id="lockin" aria-labelledby="lockin-h">
+  <h2 id="lockin-h">Lock-in amplifier</h2>
+  <p class="status"><b>Vivado:</b> builds, timing met with 11.9 ns to spare, 3.6 % of the chip, 0.13 W · <b>Simulation:</b> amplitude within 0.1 %, phase within 0.4° · <i>Hardware:</i> not run yet</p>
+  <div class="prose">
+    <p>The FPGA generates a sine wave digitally and sends it out of JM1-10 as a very fast on/off stream. The 1 kΩ + 10 nF filter smooths that into a real sine, from micro-hertz steps up to about 100 kHz. Whatever comes back is sampled on JM1-6, 390,625 times a second.</p>
+    <p>The FPGA multiplies those samples by its own sine and cosine and averages them. Anything that isn't at the drive frequency, like noise and mains hum, averages toward zero. What's left is the amplitude and the phase lag of the response at exactly the drive frequency.</p>
+  </div>
+  <h3>First test: loop-back</h3>
+  <div class="scroll">
+    <svg class="diagram" viewBox="0 0 820 386" role="img" aria-label="Lock-in loop-back wiring: JM1-10 through 1 kilo-ohm to a node with 10 nanofarads to ground; node through 33 kilo-ohm to JM1-6 with 10 kilo-ohm to ground; JM1-8 jumpered to JM1-4; JM1-12 optional to a scope.">
+      <g class="pad"><rect x="16" y="38" width="150" height="34" rx="6"/><text class="pn" x="28" y="59.5">JM1-10</text><text class="pl" x="86" y="59.5">drive out</text></g>
+      <g class="pad"><rect x="16" y="98" width="150" height="34" rx="6"/><text class="pn" x="28" y="119.5">JM1-12</text><text class="pl" x="86" y="119.5">sync out</text></g>
+      <g class="pad"><rect x="16" y="208" width="150" height="34" rx="6"/><text class="pn" x="28" y="229.5">JM1-6</text><text class="pl" x="86" y="229.5">ADC +</text></g>
+      <g class="pad"><rect x="16" y="278" width="150" height="34" rx="6"/><text class="pn" x="28" y="299.5">JM1-8</text><text class="pl" x="86" y="299.5">ADC −</text></g>
+      <g class="pad"><rect x="16" y="338" width="150" height="34" rx="6"/><text class="pn" x="28" y="359.5">JM1-4</text><text class="pl" x="86" y="359.5">GND</text></g>
+      <path class="w out" d="M166 55 H240"/>
+      <rect class="res" x="240" y="47" width="60" height="16" rx="2"/><text class="t" x="270" y="38" text-anchor="middle">1 kΩ</text>
+      <path class="w ana" d="M300 55 H450"/>
+      <circle class="dot" cx="370" cy="55" r="4.5"/>
+      <path class="w ana" d="M370 55 V138"/>
+      <line class="plate" x1="354" y1="138" x2="386" y2="138"/><line class="plate" x1="354" y1="146" x2="386" y2="146"/>
+      <text class="t" x="396" y="147">10 nF</text>
+      <path class="w gnd" d="M370 146 V164"/>
+      <path class="gs" d="M356 164 H384 M361 170 H379 M366 176 H374"/>
+      <text class="tm" x="382" y="92">smoothed sine, 0–3.3 V</text>
+      <rect class="res" x="450" y="47" width="60" height="16" rx="2"/><text class="t" x="480" y="38" text-anchor="middle">33 kΩ</text>
+      <path class="w ana" d="M510 55 H690 V225 H166"/>
+      <circle class="dot" cx="600" cy="55" r="4.5"/>
+      <path class="w ana" d="M600 55 V92"/>
+      <rect class="res" x="592" y="92" width="16" height="56" rx="2"/><text class="t" x="616" y="124">10 kΩ</text>
+      <path class="w gnd" d="M600 148 V166"/>
+      <path class="gs" d="M586 166 H614 M591 172 H609 M596 178 H604"/>
+      <text class="t" x="702" y="136">≤ 0.77 V</text><text class="tm" x="702" y="154">3.3 V ÷ 4.3</text>
+      <path class="w gnd" d="M166 295 H206 V355 H166"/>
+      <text class="tm" x="216" y="330">jumper</text>
+      <path class="w out" d="M166 115 H222"/><path class="ah out" d="M222 109 L234 115 L222 121 Z"/>
+      <text class="tm" x="242" y="119">to scope (optional)</text>
+    </svg>
+  </div>
+  <p class="cap">The board's output goes through the filter. The divider brings it under 1 V, and it comes straight back into the ADC. Add the PC link from the shared section below. Parts: 1 kΩ, 33 kΩ and 10 kΩ resistors, a 10 nF capacitor, a breadboard and jumpers.</p>
+  <div class="prose">
+    <h3>Commands</h3>
+    <p class="note">From <code>P:\Downloads\freq-lab</code>, after <code>pip install pyserial</code> once. COM7 stands for your Teensy's port (Device Manager → Ports).</p>
+  </div>
+<pre>python tools/lockin_host.py COM7 id
+python tools/lockin_host.py COM7 cal
+python tools/lockin_host.py COM7 sweep 50 2000 40 --log --amp 0.2 --out loop.csv
+python tools/lockin_host.py COM7 off</pre>
+  <div class="two">
+    <div>
+      <h3>What working looks like</h3>
+      <p><code>id</code> prints the design's ID. <code>cal</code> measures the loop's delay and saves it. The sweep should then read almost the same amplitude at every frequency with a lag near 0°, because nothing in the loop resonates. If you get that, the whole chain works.</p>
+    </div>
+    <div>
+      <h3>LEDs and sync</h3>
+      <p>LED1 blinks about once a second while the design runs. LED2 toggles after every finished measurement. JM1-12 puts out a square wave at the drive frequency for a scope trigger.</p>
+    </div>
+  </div>
+  <div class="prose">
+    <h3>Measuring something real</h3>
+    <p>Drive the thing you're testing from the filter node, such as a coil, piezo or LC circuit. Bring its response back into JM1-6 through the analog front end in the correlator section. That holds the pin at 0.5 V and keeps the swing in range. Sweep across the range you care about, then <code>track 440 --step 0.05</code> follows a resonance near 440 Hz as it drifts.</p>
+  </div>
+</section>
+
+<section id="photon" aria-labelledby="photon-h">
+  <h2 id="photon-h">Photon coincidence counter</h2>
+  <p class="status"><b>Vivado:</b> builds, timing met with 11.6 ns to spare, 1.1 % of the chip, 0.11 W · <b>Simulation:</b> 12 of 12 checks · <i>Hardware:</i> not run yet<br><i>Fixed tonight:</i> pulses that land in the same 20 ns tick now count as a coincidence (they used to be missed), and each pulse counts toward at most one pair.</p>
+  <div class="prose">
+    <p>Each detector sends one short 3.3 V pulse per photon. The FPGA checks both inputs every 20 ns and counts every pulse on each channel; these are the singles. When A and B fire within the window you set, in either order, it also counts a coincidence. The window is set in 20 ns ticks, so <code>window 10</code> means within ±200 ns.</p>
+    <p>Two detectors watching unrelated light still line up by chance now and then. The <code>accidental</code> command works out how many of those to expect from the singles. The coincidences left over are photons hitting both detectors together.</p>
+  </div>
+  <div class="scroll">
+    <svg class="diagram" viewBox="0 0 760 306" role="img" aria-label="Photon counter wiring: detector A output to JM1-6, detector B output to JM1-8, gate on JM1-10, detector grounds to JM1-3.">
+      <g class="pad"><rect x="16" y="24" width="150" height="34" rx="6"/><text class="pn" x="28" y="45.5">JM1-6</text><text class="pl" x="86" y="45.5">detector A</text></g>
+      <g class="pad"><rect x="16" y="96" width="150" height="34" rx="6"/><text class="pn" x="28" y="117.5">JM1-8</text><text class="pl" x="86" y="117.5">detector B</text></g>
+      <g class="pad"><rect x="16" y="168" width="150" height="34" rx="6"/><text class="pn" x="28" y="189.5">JM1-10</text><text class="pl" x="86" y="189.5">gate</text></g>
+      <g class="pad"><rect x="16" y="258" width="150" height="34" rx="6"/><text class="pn" x="28" y="279.5">JM1-3</text><text class="pl" x="86" y="279.5">GND</text></g>
+      <rect class="box" x="440" y="16" width="210" height="56" rx="8"/><text class="tb" x="456" y="39">Detector A</text><text class="tm" x="456" y="59">3.3 V pulse, at least 25 ns</text>
+      <rect class="box" x="440" y="88" width="210" height="56" rx="8"/><text class="tb" x="456" y="111">Detector B</text><text class="tm" x="456" y="131">3.3 V pulse, at least 25 ns</text>
+      <path class="w in" d="M440 41 H166"/><path class="ah in" d="M306 35 L294 41 L306 47 Z"/>
+      <path class="w in" d="M440 113 H166"/><path class="ah in" d="M306 107 L294 113 L306 119 Z"/>
+      <path class="w in" d="M166 185 H226"/>
+      <text class="t" x="236" y="183">open: always counting</text><text class="tm" x="236" y="201">to GND: counting paused</text>
+      <path class="w gnd" d="M166 275 H700 V56 H650 M700 128 H650"/>
+      <circle class="dot" cx="700" cy="128" r="4"/>
+      <text class="tm" x="560" y="266" text-anchor="middle">shared ground</text>
+    </svg>
+  </div>
+  <p class="cap">Power the detector modules from their own supply and share ground with the board. For a dry run without detectors, any two 3.3 V pulse sources work: a function generator, or a spare Teensy toggling two pins. The gate input has an internal pull-up, so leaving it unconnected means counting is on.</p>
+  <div class="two">
+    <div>
+      <h3>Commands</h3>
+      <p class="note">This one is interactive: start it with just the port, then type at the <code>photon&gt;</code> prompt.</p>
+<pre>python tools/photon_host.py COM7
+photon&gt; window 10      <span class="c"># within ±200 ns</span>
+photon&gt; run 10         <span class="c"># count 10 s, print results</span>
+photon&gt; accidental     <span class="c"># chance overlaps vs real</span>
+photon&gt; csv run1.csv 60 5
+photon&gt; quit</pre>
+    </div>
+    <div>
+      <h3>What working looks like</h3>
+      <p>It prints the design's ID as soon as it connects. <code>run 10</code> prints singles A, singles B, coincidences and elapsed time. In a dry run, pulses sent to both inputs at the same moment give coincidences equal to the singles, while two unrelated pulse trains give about the accidental number.</p>
+      <p>LED1 blinks about once a second. LED2 is on while counting.</p>
+    </div>
+  </div>
+</section>
+
+<section id="corr" aria-labelledby="corr-h">
+  <h2 id="corr-h">Two-channel correlator</h2>
+  <p class="status"><b>Vivado:</b> builds, timing met with 8.1 ns to spare, 2.4 % of the chip, 0.12 W · <b>Simulation:</b> 7 of 7 · <i>Hardware:</i> not run yet<br><i>Fixed tonight:</i> the ADC now samples your two inputs (it was set to read the chip's own supply voltage), channel B moved to JM1-9/11 (the old pins weren't ADC pins), and the ADC's input wiring inside the chip was corrected.</p>
+  <div class="prose">
+    <p>The on-chip ADC samples channel A and channel B in turn, about 195,000 times a second each. Over each window it adds up A², B², A×B and the averages, and the PC turns that into a coherence between −1 and +1.</p>
+    <p>Two sensors picking up the same distant source read high, for example two ELF antennas hearing the Earth–ionosphere (Schumann) resonances. Noise that's local to each sensor doesn't line up and reads near 0. A GPS module's once-a-second pulse lets two boards at different places line up their sample counts.</p>
+  </div>
+  <div class="scroll">
+    <svg class="diagram" viewBox="0 0 790 336" role="img" aria-label="Correlator wiring: sensor A through a front end to JM1-6 with its ground on JM1-8; sensor B through a front end to JM1-9 with its ground on JM1-11; GPS PPS to JM1-18.">
+      <g class="pad"><rect x="16" y="22" width="150" height="34" rx="6"/><text class="pn" x="28" y="43.5">JM1-6</text><text class="pl" x="86" y="43.5">ch A +</text></g>
+      <g class="pad"><rect x="16" y="82" width="150" height="34" rx="6"/><text class="pn" x="28" y="103.5">JM1-8</text><text class="pl" x="86" y="103.5">ch A −</text></g>
+      <g class="pad"><rect x="16" y="152" width="150" height="34" rx="6"/><text class="pn" x="28" y="173.5">JM1-9</text><text class="pl" x="86" y="173.5">ch B +</text></g>
+      <g class="pad"><rect x="16" y="212" width="150" height="34" rx="6"/><text class="pn" x="28" y="233.5">JM1-11</text><text class="pl" x="86" y="233.5">ch B −</text></g>
+      <g class="pad"><rect x="16" y="284" width="150" height="34" rx="6"/><text class="pn" x="28" y="305.5">JM1-18</text><text class="pl" x="86" y="305.5">GPS PPS</text></g>
+      <rect class="box" x="300" y="19" width="170" height="40" rx="6"/><text class="tm" x="385" y="43.5" text-anchor="middle">front end (below)</text>
+      <rect class="box" x="300" y="149" width="170" height="40" rx="6"/><text class="tm" x="385" y="173.5" text-anchor="middle">front end (below)</text>
+      <path class="w ana" d="M166 39 H300 M470 39 H560"/>
+      <path class="w gnd" d="M166 99 H560"/>
+      <path class="w ana" d="M166 169 H300 M470 169 H560"/>
+      <path class="w gnd" d="M166 229 H560"/>
+      <path class="w in" d="M560 301 H166"/><path class="ah in" d="M366 295 L354 301 L366 307 Z"/>
+      <rect class="box" x="560" y="18" width="212" height="100" rx="8"/>
+      <text class="tm" x="574" y="43">signal</text><text class="tb" x="574" y="70">Sensor A</text><text class="tm" x="574" y="88">coil or electrodes + amp</text><text class="tm" x="574" y="103">ground</text>
+      <rect class="box" x="560" y="148" width="212" height="100" rx="8"/>
+      <text class="tm" x="574" y="173">signal</text><text class="tb" x="574" y="200">Sensor B</text><text class="tm" x="574" y="218">coil or electrodes + amp</text><text class="tm" x="574" y="233">ground</text>
+      <rect class="box" x="560" y="276" width="212" height="50" rx="8"/>
+      <text class="tb" x="574" y="298">GPS module</text><text class="tm" x="574" y="316">PPS out, 3.3 V, optional</text>
+    </svg>
+  </div>
+  <p class="cap">Channel B is on the odd row: JM1-9 and JM1-11. Older notes said 10 and 12, but those aren't ADC pins. With nothing on JM1-18 it reads low, so the GPS input is safe to leave empty.</p>
+
+  <h3>Analog front end (one per ADC input)</h3>
+  <div class="scroll">
+    <svg class="diagram" viewBox="0 0 700 290" role="img" aria-label="Analog front end: 56 kilo-ohm from 3.3 volts and 10 kilo-ohm to ground hold the ADC pin at 0.5 volts; the sensor signal comes in through a coupling capacitor; the ADC minus pin goes to the sensor ground.">
+      <g class="pad"><rect x="16" y="22" width="150" height="34" rx="6"/><text class="pn" x="28" y="43.5">JM1-2</text><text class="pl" x="86" y="43.5">3.3 V</text></g>
+      <g class="pad"><rect x="16" y="112" width="150" height="34" rx="6"/><text class="pn" x="28" y="133.5">JM1-6</text><text class="pl" x="86" y="133.5">ADC +</text></g>
+      <g class="pad"><rect x="16" y="232" width="150" height="34" rx="6"/><text class="pn" x="28" y="253.5">JM1-8</text><text class="pl" x="86" y="253.5">ADC −</text></g>
+      <path class="w p33" d="M166 39 H300 V64"/>
+      <rect class="res" x="292" y="64" width="16" height="46" rx="2"/><text class="t" x="316" y="92">56 kΩ</text>
+      <path class="w ana" d="M300 110 V152 M166 129 H430"/>
+      <circle class="dot" cx="300" cy="129" r="4.5"/>
+      <text class="tm" x="233" y="119" text-anchor="middle">0.5 V bias</text>
+      <line class="plate" x1="430" y1="113" x2="430" y2="145"/><line class="plate" x1="438" y1="113" x2="438" y2="145"/>
+      <text class="t" x="434" y="104" text-anchor="middle">C</text>
+      <path class="w ana" d="M438 129 H560"/>
+      <rect class="res" x="292" y="152" width="16" height="46" rx="2"/><text class="t" x="316" y="180">10 kΩ</text>
+      <path class="w gnd" d="M300 198 V216"/>
+      <path class="gs" d="M286 216 H314 M291 222 H309 M296 228 H304"/>
+      <path class="w gnd" d="M166 249 H560"/>
+      <rect class="box" x="560" y="96" width="124" height="176" rx="8"/>
+      <text class="tm" x="572" y="133">signal</text><text class="tb" x="622" y="176" text-anchor="middle">Sensor</text><text class="tm" x="622" y="194" text-anchor="middle">or amplifier</text>
+      <text class="tm" x="622" y="216" text-anchor="middle">swing ≤ ±0.4 V</text><text class="tm" x="572" y="253">ground</text>
+    </svg>
+  </div>
+  <p class="cap">56 kΩ to 3.3 V and 10 kΩ to ground hold the ADC pin at 0.5 V, the middle of its 0 to 1 V range. Capacitor C passes the sensor's signal and blocks its DC, and it sets the lowest frequency that gets through. 100 nF passes above about 190 Hz, which is fine for the lock-in. For ELF signals use 220 µF non-polarized, which passes down to about 0.1 Hz; give it about 10 s after power-up to settle. For channel B, use JM1-9 (+) and JM1-11 (−).</p>
+
+  <div class="two">
+    <div>
+      <h3>Commands</h3>
+      <p class="note">Interactive, like the photon counter: start with the port, then type at <code>corr&gt;</code>.</p>
+<pre>python tools/correlator_host.py COM7
+corr&gt; adc             <span class="c"># both ≈ 2048 on the bias</span>
+corr&gt; window 100000   <span class="c"># ≈ 0.5 s per window</span>
+corr&gt; stream 5        <span class="c"># coherence of 5 windows</span>
+corr&gt; lagplot 16      <span class="c"># offsets ±16 × 5.12 µs</span>
+corr&gt; quit</pre>
+    </div>
+    <div>
+      <h3>What working looks like</h3>
+      <p><code>adc</code> shows both channels near 2048 (0.5 V) with just the front ends connected. With the same signal into both channels, <code>stream 5</code> prints coherence close to +1.000. Two unrelated signals give close to 0.</p>
+      <p>For ELF work use long windows, because the first Schumann mode is 7.8 Hz: <code>window 1000000</code> is about 5 s. <code>stream</code> waits at most 10 s per window, so stay under about 1,900,000.</p>
+      <p>LED1 blinks about once a second. LED2 is on while a window is being captured.</p>
+      <p class="note">Known limit: <code>lagplot</code> only uses the last 256 samples and wraps around at the ends, so values away from lag 0 are a little off. Coherence at lag 0 is exact.</p>
+    </div>
+  </div>
+</section>
+
+<section id="shared" aria-labelledby="shared-h">
+  <h2 id="shared-h">PC link, fan and loading a design</h2>
+  <h3>Serial link to the PC</h3>
+  <div class="scroll">
+    <svg class="diagram" viewBox="0 0 790 226" role="img" aria-label="Serial link: JM1-14 FPGA transmit to Teensy pin 0, Teensy pin 1 to JM1-16 FPGA receive, ground to ground, Teensy USB to the PC.">
+      <g class="pad"><rect x="16" y="26" width="150" height="34" rx="6"/><text class="pn" x="28" y="47.5">JM1-14</text><text class="pl" x="86" y="47.5">UART TX</text></g>
+      <g class="pad"><rect x="16" y="96" width="150" height="34" rx="6"/><text class="pn" x="28" y="117.5">JM1-16</text><text class="pl" x="86" y="117.5">UART RX</text></g>
+      <g class="pad"><rect x="16" y="166" width="150" height="34" rx="6"/><text class="pn" x="28" y="187.5">JM1-4</text><text class="pl" x="86" y="187.5">GND</text></g>
+      <rect class="box" x="420" y="16" width="250" height="194" rx="10"/>
+      <text class="tc" x="434" y="47.5">pin 0 · RX1</text><text class="tc" x="434" y="117.5">pin 1 · TX1</text><text class="tc" x="434" y="187.5">GND</text>
+      <text class="tb" x="602" y="100" text-anchor="middle">Teensy 4.1</text><text class="tc" x="602" y="140" text-anchor="middle">fpga_uart</text><text class="tc" x="602" y="156" text-anchor="middle">_bridge</text>
+      <path class="w uart" d="M166 43 H420"/><path class="ah uart" d="M294 37 L306 43 L294 49 Z"/>
+      <path class="w uart" d="M420 113 H166"/><path class="ah uart" d="M306 107 L294 113 L306 119 Z"/>
+      <path class="w gnd" d="M166 183 H420"/>
+      <path class="w usb" d="M670 113 H770"/><text class="tm" x="720" y="103" text-anchor="middle">USB to PC</text>
+    </svg>
+  </div>
+  <p class="cap">Load <code>teensy/fpga_uart_bridge</code> onto the Teensy and the PC sees the FPGA as the Teensy's COM port (115200 baud). The wires cross: FPGA TX goes to Teensy RX, and Teensy TX goes to FPGA RX. A 3.3 V USB-serial adapter works the same way: its RX to JM1-14, its TX to JM1-16, and GND to GND.</p>
+
+  <h3>Fan</h3>
+  <div class="scroll">
+    <svg class="diagram" viewBox="0 0 790 254" role="img" aria-label="Fan wiring: JM1-1 5 volts to fan positive for 5 volt fans only, JM1-3 ground, JM1-5 PWM to the fan, fan tach to JM1-7.">
+      <g class="pad"><rect x="16" y="20" width="150" height="34" rx="6"/><text class="pn" x="28" y="41.5">JM1-1</text><text class="pl" x="86" y="41.5">5 V</text></g>
+      <g class="pad"><rect x="16" y="80" width="150" height="34" rx="6"/><text class="pn" x="28" y="101.5">JM1-3</text><text class="pl" x="86" y="101.5">GND</text></g>
+      <g class="pad"><rect x="16" y="140" width="150" height="34" rx="6"/><text class="pn" x="28" y="161.5">JM1-5</text><text class="pl" x="86" y="161.5">fan PWM</text></g>
+      <g class="pad"><rect x="16" y="200" width="150" height="34" rx="6"/><text class="pn" x="28" y="221.5">JM1-7</text><text class="pl" x="86" y="221.5">fan tach</text></g>
+      <rect class="box" x="440" y="14" width="250" height="226" rx="10"/>
+      <text class="tm" x="454" y="41.5">+V (5 V fans only)</text><text class="tm" x="454" y="101.5">GND</text><text class="tm" x="454" y="161.5">PWM in</text><text class="tm" x="454" y="221.5">TACH out</text>
+      <text class="tb" x="628" y="132" text-anchor="middle">4-wire fan</text>
+      <path class="w p5" d="M166 37 H440"/>
+      <path class="w gnd" d="M166 97 H440"/>
+      <path class="w fan" d="M166 157 H440"/><path class="ah fan" d="M294 151 L306 157 L294 163 Z"/>
+      <path class="w fan" d="M440 217 H166"/><path class="ah fan" d="M306 211 L294 217 L306 223 Z"/>
+    </svg>
+  </div>
+  <p class="cap">All three designs run the fan the same way: 25 kHz PWM on JM1-5, with the tach read on JM1-7 (the FPGA has a pull-up on it). Hold KEY1 on the board for full speed. A 12 V fan needs its own 12 V supply with its ground tied to the board's. Measure the PWM wire first (see the safety list).</p>
+
+  <h3>Loading a design onto the board</h3>
+  <ol class="steps">
+    <li>Wire everything with the board unplugged, then power it.</li>
+    <li>Set the boot-mode jumpers to JTAG.</li>
+    <li>Plug the board's JTAG USB-C into the PC. It's the port wired to the onboard FT232H and shows up as an FTDI device. The other USB-C is a CH340 serial port to the ARM side, which these designs don't use.</li>
+    <li>Open <strong>Vivado 2026.1 Tcl Shell</strong> from the Start menu and type the two lines below, using the folder of the design you want.</li>
+    <li>LED1 starts blinking about once a second, so it's running. A design loaded over JTAG lasts until power-off, so load it again after a power cycle.</li>
+  </ol>
+<pre>cd P:/Downloads/freq-lab/fpga/lockin      <span class="c"># or fpga/photon_counter, fpga/correlator</span>
+source program.tcl</pre>
+  <p class="note">To rebuild after changing any HDL, double-click <code>build_all_vivado.bat</code> in <code>P:\Downloads\freq-lab\fpga</code>. It rebuilds all three, about 8 minutes.</p>
+</section>
+
+<section id="rest" aria-labelledby="rest-h">
+  <h2 id="rest-h">The other freq-lab sketches</h2>
+  <p class="note">These run on the Teensy or STM32, not the FPGA. All of them compile; none has run on hardware yet.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Sketch</th><th>Runs on</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>teensy/resonance_sweep</code></td><td>Teensy 4.1 + MPU-6050 + a shaker</td><td>Shakes an object from 0.05 to 400 Hz and reads the response off the accelerometer: resonance curve, Q, tracking, ring-down.</td></tr>
+        <tr><td><code>teensy/body_resonance</code></td><td>Teensy 4.1 + up to six MPU-6050</td><td>Vibration spectra at several points on a body or structure, the transfer between two points, and heartbeat recoil (ballistocardiogram).</td></tr>
+        <tr><td><code>teensy/hemisync_gen</code></td><td>Teensy 4.1 + headphones</td><td>Binaural tone pairs with exact beat frequencies, pink and surf noise, and blind or sham sessions for testing.</td></tr>
+        <tr><td><code>teensy/elf_logger</code></td><td>Teensy 4.1 + amplifier + coil or electrodes, GPS optional</td><td>Logs the 0.25–45 Hz spectrum with mains rejection: Schumann modes, SRI's 19 bands, GPS-stamped raw waveform.</td></tr>
+        <tr><td><code>teensy/strobe_driver</code></td><td>Teensy 4.1 + LEDs</td><td>Flashing light at 0.1–100 Hz in randomized trial blocks, with a light-sensor check. Flashing light can trigger seizures in photosensitive people, so read the warning at the top of the file first.</td></tr>
+        <tr><td><code>teensy/cc1101_scanner</code></td><td>Teensy 4.1 + CC1101</td><td>Sub-GHz spectrum scanner, 300–928 MHz, peak hold, CSV export.</td></tr>
+        <tr><td><code>teensy/fpga_uart_bridge</code></td><td>Teensy 4.1</td><td>Passes the FPGA's serial link through to USB. All three FPGA designs use it.</td></tr>
+        <tr><td><code>stm32/rf_resonance</code></td><td>2 × STM32 + SX1262 (DX-LR20 kit)</td><td>One radio transmits and the other measures across 900–928 MHz, with a sample between the antennas, to look for absorption dips.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Pin data from Puzhi's PZ-StarLite connector sheet and schematic. Designs built and timing-checked in Vivado 2026.1 on Sep 30, 2026.</footer>
+</div>
+
+<script>
+(function () {
+  var BALL = {5:'H16',6:'E17',7:'H17',8:'D18',9:'E18',10:'F16',11:'E19',12:'F17',13:'G17',14:'B19',15:'G18',16:'A20',
+    17:'D19',18:'C20',19:'D20',20:'B20',21:'J18',22:'K19',23:'H18',24:'J19',25:'K17',26:'M17',27:'K18',28:'M18',
+    29:'L16',30:'F19',31:'L17',32:'F20',37:'M19',38:'L19',39:'M20',40:'L20'};
+  var POWER = {1:['5 V','p5'],2:['3.3 V','p33'],3:['GND','gnd'],4:['GND','gnd'],33:['GND','gnd'],34:['GND','gnd'],35:['GND','gnd'],36:['GND','gnd']};
+  function withCommon(o) {
+    var c = {5:['Fan PWM','fan'],7:['Fan tach','fan'],14:['TX → PC','uart'],16:['RX ← PC','uart']};
+    for (var k in c) o[k] = c[k];
+    return o;
+  }
+  var USES = {
+    lockin: withCommon({6:['ADC +','ana'],8:['ADC −','ana'],10:['Drive out','out'],12:['Sync out','out']}),
+    photon: withCommon({6:['Detector A','in'],8:['Detector B','in'],10:['Gate','in']}),
+    corr:   withCommon({6:['Ch A +','ana'],8:['Ch A −','ana'],9:['Ch B +','ana'],11:['Ch B −','ana'],18:['GPS PPS','in']})
+  };
+  var NAMES = {lockin:'Lock-in', photon:'The photon counter', corr:'The correlator'};
+  var svg = document.getElementById('pinmap');
+  var note = document.getElementById('pinnote');
+
+  function draw(d) {
+    var u = USES[d], top = 30, step = 27.5, s = '';
+    s += '<rect class="hdr" x="208" y="' + (top - 18) + '" width="104" height="' + (19 * step + 36) + '" rx="8"/>';
+    for (var i = 0; i < 20; i++) {
+      var y = top + i * step;
+      for (var side = 0; side < 2; side++) {
+        var n = 2 * i + 1 + side, x = side ? 284 : 236, ball = BALL[n] || '';
+        var label = 'free', role = 'off';
+        if (POWER[n]) { label = POWER[n][0]; role = POWER[n][1]; }
+        else if (u[n]) { label = u[n][0]; role = u[n][1]; }
+        s += (n === 1)
+          ? '<rect class="pin r-' + role + '" x="' + (x - 10) + '" y="' + (y - 10) + '" width="20" height="20" rx="2"/>'
+          : '<circle class="pin r-' + role + '" cx="' + x + '" cy="' + y + '" r="10"/>';
+        s += '<text class="pnum r-' + role + '" x="' + x + '" y="' + y + '">' + n + '</text>';
+        var cls = 'plab' + (role === 'off' ? ' off' : '');
+        if (side === 0) {
+          s += '<text class="' + cls + '" x="198" y="' + (y + 4.5) + '" text-anchor="end">' + label +
+               (ball ? '<tspan class="ball" dx="6">' + ball + '</tspan>' : '') + '</text>';
+        } else {
+          s += '<text class="' + cls + '" x="322" y="' + (y + 4.5) + '">' +
+               (ball ? '<tspan class="ball">' + ball + '</tspan><tspan dx="6">' + label + '</tspan>' : label) + '</text>';
+        }
+      }
+    }
+    svg.innerHTML = s;
+    var used = Object.keys(u).map(Number).sort(function (a, b) { return a - b; });
+    note.textContent = NAMES[d] + ' uses JM1 ' + used.join(', ') + ', plus GND. Everything else on JM1, and all of JM2, stays free.';
+    var btns = document.querySelectorAll('.seg button');
+    for (var j = 0; j < btns.length; j++) btns[j].setAttribute('aria-pressed', String(btns[j].getAttribute('data-d') === d));
+  }
+
+  var segs = document.querySelectorAll('.seg button');
+  for (var a = 0; a < segs.length; a++) segs[a].addEventListener('click', function () { draw(this.getAttribute('data-d')); });
+  var shows = document.querySelectorAll('.show');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (var b = 0; b < shows.length; b++) shows[b].addEventListener('click', function () {
+    draw(this.getAttribute('data-d'));
+    document.getElementById('pins').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+  });
+  draw('lockin');
+})();
+</script>
+
+</body></html>

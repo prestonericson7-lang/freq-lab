@@ -1,0 +1,13 @@
+{
+ "rotor_I_kg_m2": 1.0146184649784118e-05,
+ "rotor_mass_g": 16.535911560058594,
+ "rotor_pla_g": 5.195910453796387,
+ "quarters": 2,
+ "arm_mm": 24.0,
+ "pause_layer_top_mm": 3.4000000000000004,
+ "rotor_gap_mm": 20.0,
+ "paper_d_mm": 95.0,
+ "ref_x_mm": 30.0,
+ "floor_d_mm": 97.0,
+ "window_d_mm": 93.0
+}
