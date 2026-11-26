@@ -1,5 +1,13 @@
 # freq-lab
 
+[![YouTube channel](https://img.shields.io/badge/YouTube-%40LittlebrainsBigmess-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@LittlebrainsBigmess) [![ORCID](https://img.shields.io/badge/ORCID-0009--0009--9123--2731-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0009-0009-9123-2731)
+
+By **Preston Ericson**, with **Mira (Claude)**.
+
+**Related:** [pz7020-starlite](https://github.com/prestonericson7-lang/pz7020-starlite) · [esp32](https://github.com/prestonericson7-lang/esp32) · [all our work](https://github.com/prestonericson7-lang)
+
+---
+
 **A GPS-disciplined space-weather monitoring stack, built on an FPGA.**
 
 An 8-station VLF solar-flare receiver that watches U.S. Navy transmitters for the
