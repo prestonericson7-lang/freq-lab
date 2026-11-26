@@ -4,7 +4,7 @@
 
 By **Preston Ericson**, with **Mira (Claude)**.
 
-**Related:** [pz7020-starlite](https://github.com/prestonericson7-lang/pz7020-starlite) · [esp32](https://github.com/prestonericson7-lang/esp32) · [all our work](https://github.com/prestonericson7-lang)
+**Related:** [pz7020-starlite](https://github.com/prestonericson7-lang/pz7020-starlite) · [all our work](https://github.com/prestonericson7-lang)
 
 ---
 
